@@ -28,7 +28,29 @@ int StreamReader::read(uint8_t *buf, int buf_size) {
 }
 
 int64_t StreamReader::seek(int64_t offset, int whence) {
-	cout << "Seek: " << offset << " whence:" << whence << endl;
+	cout << "Seek: " << offset << " whence:";
+	switch (whence) {
+	case AVSEEK_SIZE:
+		cout <<"AVSEEK_SIZE" << endl;
+		return -1;
+	case SEEK_SET:
+		cout <<"SEEK_SET" << endl;
+		if (offset < 0) {
+			return -1;
+		} else {
+			ios.seekg(offset);
+			return ios.fail() || ios.eof() ? -1 : (int)ios.tellg();
+		}
+	case SEEK_CUR:
+		cout <<"SEEK_CUR" << endl;
+		ios.seekg(ios.tellg() + offset);
+		return ios.fail() || ios.eof() ? -1 : (int)ios.tellg();
+	case SEEK_END:
+		cout << "SEEK_END" << endl;
+		ios.seekg(offset, ios_base::end);
+		return ios.fail() || ios.eof() ? -1 : (int)ios.tellg();
+	}
+	cout << whence << endl;
 	return -1;
 }
 

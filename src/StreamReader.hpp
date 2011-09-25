@@ -8,6 +8,9 @@
 #ifndef STREAMREADER_H_
 #include <iostream>
 #include "fixstdint.hpp"
+extern "C" {
+#include <libavformat/avio.h>
+}
 #define STREAMREADER_H_
 
 using namespace std;

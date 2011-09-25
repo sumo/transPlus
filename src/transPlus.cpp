@@ -11,16 +11,44 @@
 #include <iostream>
 #include <map>
 #include <fstream>
+#include <vector>
 #include <boost/shared_ptr.hpp>
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 }
 #include "StreamReader.hpp"
+#include "FFmpegStream.hpp"
 
 using namespace std;
 
+void runDecodeLoop(vector<FFmpegStream> ffStreams, AVFormatContext *formatCtx) {
+	bool eof = false;
+	while (!eof) {
+		AVPacket pkt;
+		int ret = av_read_frame(formatCtx, &pkt);
+		if (ret < 0) {
+			char* s = new char[1024];
+			av_strerror(ret, s, 1024);
+			cout << "Read frame failed: " << s << endl;
+			delete s;
+			av_free_packet(&pkt);
+			return;
+		}
+		if (ret == EAGAIN) {
+			cout << "Stream " << pkt.stream_index << " EAGAIN" << endl;
+		} else {
+			int streamIdx = pkt.stream_index;
+			if (streamIdx < ffStreams.size()) {
+				FFmpegStream ffStream = ffStreams[streamIdx];
+				ffStream << pkt;
+			} else {
+				cout << "Ignoring new stream " << streamIdx << endl;
+			}
 
+		}
+	}
+}
 
 int main(int argc, char* argv[]) {
 	avcodec_register_all();
@@ -56,8 +84,9 @@ int main(int argc, char* argv[]) {
 	AVInputFormat *fmt = av_probe_input_format(probeData, 1);
 	cout << "Probe successful: " << fmt->name << ": " << fmt->long_name << endl;
 
-	AVIOContext *context = avio_alloc_context(buffer, 4096, URL_RDONLY, (void*)&reader,
-			StreamReader::readFunction, NULL, StreamReader::seekFunction);
+	AVIOContext *context = avio_alloc_context(buffer, 4096, URL_RDONLY,
+			(void*) &reader, StreamReader::readFunction, NULL,
+			StreamReader::seekFunction);
 	AVFormatContext *formatContext = new AVFormatContext;
 	if (int i = av_open_input_stream(&formatContext, context, "", fmt, NULL) < 0) {
 		char* s = new char[1024];
@@ -68,7 +97,14 @@ int main(int argc, char* argv[]) {
 	}
 	cout << "Format: " << formatContext->iformat->name << endl;
 	AVStream** avStreams = formatContext->streams;
-	cout << "Codec: " << avStreams[0]->codec->codec_name << endl;
+	vector<FFmpegStream> ffStreams;
+
+	for (unsigned int i = 0; i < formatContext->nb_streams; i++) {
+		FFmpegStream fms = FFmpegStreamFactory::createStream(avStreams[i]);
+		ffStreams.push_back(fms);
+	}
+	cout << "Found " << ffStreams.size() << " streams" << endl;
+	runDecodeLoop(ffStreams, formatContext);
 	return 0;
 }
 
