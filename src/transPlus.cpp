@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
 	string filename(argv[1]);
 	cout << "Using file name " << filename << endl;
 	ifstream src;
-	src.open(filename.c_str());
+	src.open(filename.c_str(), ios::binary);
 	src.read(reinterpret_cast<char*> (buffer), 4096);
 	src.seekg(ios_base::beg);
 	StreamReader reader(src);
@@ -109,6 +109,7 @@ int main(int argc, char* argv[]) {
 	}
 	cout << "Found " << ffStreams.size() << " streams" << endl;
 	runDecodeLoop(ffStreams, formatContext);
+	av_free(formatContext);
 	return 0;
 }
 
