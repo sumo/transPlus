@@ -3,6 +3,7 @@
 	<name>transPlus</name>
 	<comment></comment>
 	<projects>
+		<project>ffmpeg-0.6.1</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

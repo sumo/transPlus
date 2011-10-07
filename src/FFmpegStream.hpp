@@ -24,28 +24,27 @@ protected:
 public:
 	FFmpegStream(AVStream*, bool);
 	virtual ~FFmpegStream();
-	virtual FFmpegStream operator <<(const AVPacket);
-	string avStrError(int errorCode);
+	virtual FFmpegStream operator <<(AVPacket);
 
 };
 
 class FFmpegVideoStream: public FFmpegStream {
 public:
 	FFmpegVideoStream(AVStream*);
-	FFmpegStream operator <<(const AVPacket);
+	virtual FFmpegStream operator <<(AVPacket);
 };
 
 class FFmpegAudioStream: public FFmpegStream {
-	unsigned int sampleSize;
-	short *samples;
-	void checkAndAllocateSampleBuffer(const AVPacket);
+	int sampleSize;
+	int16_t *samples;
+	void checkAndAllocateSampleBuffer(AVPacket);
 public:
 	FFmpegAudioStream(AVStream*);
-	FFmpegStream operator <<(const AVPacket);
+	virtual FFmpegStream operator <<(AVPacket);
 };
 
 class FFmpegStreamFactory {
 public:
-	static FFmpegStream createStream(AVStream*);
+	static FFmpegStream* createStream(AVStream*);
 };
 #endif /* FFMPEGSTREAM_H_ */

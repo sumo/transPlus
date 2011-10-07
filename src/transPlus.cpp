@@ -22,17 +22,19 @@ extern "C" {
 
 using namespace std;
 
-void runDecodeLoop(vector<FFmpegStream> ffStreams, AVFormatContext *formatCtx) {
+void runDecodeLoop(vector<FFmpegStream*> ffStreams, AVFormatContext *formatCtx) {
 	bool eof = false;
 	while (!eof) {
 		AVPacket pkt;
 		int ret = av_read_frame(formatCtx, &pkt);
 		if (ret < 0) {
-			char* s = new char[1024];
-			av_strerror(ret, s, 1024);
-			cout << "Read frame failed: " << s << endl;
-			delete s;
 			av_free_packet(&pkt);
+			if (ret != -32) {
+				char* s = new char[1024];
+				av_strerror(ret, s, 1024);
+				cout << "Read frame failed: " << s << "[" << ret << "]" << endl;
+				delete s;
+			}
 			return;
 		}
 		if (ret == EAGAIN) {
@@ -40,13 +42,15 @@ void runDecodeLoop(vector<FFmpegStream> ffStreams, AVFormatContext *formatCtx) {
 		} else {
 			int streamIdx = pkt.stream_index;
 			if (streamIdx < ffStreams.size()) {
-				FFmpegStream ffStream = ffStreams[streamIdx];
+				FFmpegStream* ptr = ffStreams[streamIdx];
+				FFmpegStream& ffStream = *ptr;
 				ffStream << pkt;
 			} else {
 				cout << "Ignoring new stream " << streamIdx << endl;
 			}
 
 		}
+		av_free_packet(&pkt);
 	}
 }
 
@@ -97,10 +101,10 @@ int main(int argc, char* argv[]) {
 	}
 	cout << "Format: " << formatContext->iformat->name << endl;
 	AVStream** avStreams = formatContext->streams;
-	vector<FFmpegStream> ffStreams;
+	vector<FFmpegStream*> ffStreams;
 
 	for (unsigned int i = 0; i < formatContext->nb_streams; i++) {
-		FFmpegStream fms = FFmpegStreamFactory::createStream(avStreams[i]);
+		FFmpegStream* fms = FFmpegStreamFactory::createStream(avStreams[i]);
 		ffStreams.push_back(fms);
 	}
 	cout << "Found " << ffStreams.size() << " streams" << endl;
