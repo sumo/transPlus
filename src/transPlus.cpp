@@ -104,12 +104,12 @@ int main(int argc, char* argv[]) {
 	vector<FFmpegStream*> ffStreams;
 
 	for (unsigned int i = 0; i < formatContext->nb_streams; i++) {
-		FFmpegStream* fms = FFmpegStreamFactory::createStream(avStreams[i]);
+		FFmpegStream* fms = FFmpegStreamFactory::createStream(avStreams[i], formatContext);
 		ffStreams.push_back(fms);
 	}
 	cout << "Found " << ffStreams.size() << " streams" << endl;
 	runDecodeLoop(ffStreams, formatContext);
-	av_free(formatContext);
+	delete(formatContext);
 	return 0;
 }
 

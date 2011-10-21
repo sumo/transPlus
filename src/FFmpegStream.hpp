@@ -17,20 +17,28 @@ extern "C" {
 #define FFMPEGSTREAM_H_
 
 class FFmpegStream {
+
 protected:
 	AVStream avStream;
 	AVCodec codec;
+	AVFormatContext formatContext;
 	int bps;
+	int nextPts;
+	bool start;
+	double pts;
 public:
-	FFmpegStream(AVStream*, bool);
+	static const float dtsDeltaThreshold = 10;
+	FFmpegStream(AVStream*, AVFormatContext*, bool);
 	virtual ~FFmpegStream();
 	virtual FFmpegStream operator <<(AVPacket);
+	virtual void initPts();
+	virtual void adjustTimeStamps(AVPacket);
 
 };
 
 class FFmpegVideoStream: public FFmpegStream {
 public:
-	FFmpegVideoStream(AVStream*);
+	FFmpegVideoStream(AVStream*, AVFormatContext*);
 	virtual FFmpegStream operator <<(AVPacket);
 };
 
@@ -39,12 +47,12 @@ class FFmpegAudioStream: public FFmpegStream {
 	int16_t *samples;
 	void checkAndAllocateSampleBuffer(AVPacket);
 public:
-	FFmpegAudioStream(AVStream*);
+	FFmpegAudioStream(AVStream*, AVFormatContext*);
 	virtual FFmpegStream operator <<(AVPacket);
 };
 
 class FFmpegStreamFactory {
 public:
-	static FFmpegStream* createStream(AVStream*);
+	static FFmpegStream* createStream(AVStream*, AVFormatContext*);
 };
 #endif /* FFMPEGSTREAM_H_ */
