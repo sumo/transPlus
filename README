@@ -1,0 +1,6 @@
+Required Libraries:
+
+- Thrift
+- pion web library (./configure --with-boost-extension=-mt)
+- ffmpeg 
+- log4cplus

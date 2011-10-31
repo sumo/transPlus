@@ -8,14 +8,19 @@
 #ifndef STREAMREADER_H_
 #include <iostream>
 #include "fixstdint.hpp"
+#include <log4cplus/logger.h>
+#include <log4cplus/configurator.h>
 extern "C" {
 #include <libavformat/avio.h>
 }
 #define STREAMREADER_H_
 
 using namespace std;
+using namespace log4cplus;
+
 class StreamReader {
 	istream& ios;
+	Logger logger;
 public:
 	StreamReader(istream& ios);
 	virtual ~StreamReader();

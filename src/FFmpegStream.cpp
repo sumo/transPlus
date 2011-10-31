@@ -9,7 +9,10 @@
 
 using namespace std;
 
-FFmpegStream::FFmpegStream(AVStream* avs, AVFormatContext* fc, bool findCodec) {
+template <class Decoded>
+FFmpegStream<Decoded>::FFmpegStream(AVStream* avs, AVFormatContext* fc, bool findCodec,
+		string streamName) {
+	logger = Logger::getInstance(LOG4CPLUS_TEXT(streamName));
 	avStream = *avs;
 	formatContext = *fc;
 	if (findCodec) {
@@ -23,15 +26,17 @@ FFmpegStream::FFmpegStream(AVStream* avs, AVFormatContext* fc, bool findCodec) {
 	initPts();
 }
 
-FFmpegStream::~FFmpegStream() {
+template <class Decoded>
+FFmpegStream<Decoded>::~FFmpegStream() {
+
+}
+template <class Decoded>
+void FFmpegStream<Decoded>::put(AVPacket pkt) {
 
 }
 
-FFmpegStream FFmpegStream::operator <<(AVPacket pkt) {
-	return *this;
-}
-
-void FFmpegStream::adjustTimeStamps(AVPacket pkt) {
+template <class Decoded>
+void FFmpegStream<Decoded>::adjustTimeStamps(AVPacket pkt) {
 	if (pkt.dts != AV_NOPTS_VALUE)
 		pkt.dts += av_rescale_q(0, AV_TIME_BASE_Q, avStream.time_base);
 	if (pkt.pts != AV_NOPTS_VALUE)
@@ -55,7 +60,7 @@ void FFmpegStream::adjustTimeStamps(AVPacket pkt) {
 				|| pkt_dts + 1 < pts)) { // && !copy_ts - invesitgate copy timestamps
 			//input_files_ts_offset[ist->file_index] -= delta;
 			//ffmpeg.c 2891 add this back in
-			cout << "Timestamp discontinuity "<< delta << endl;
+			LOG4CPLUS_WARN(logger, "Timestamp discontinuity " << delta);
 			pkt.dts -= av_rescale_q(delta, AV_TIME_BASE_Q, avStream.time_base);
 			if (pkt.pts != AV_NOPTS_VALUE)
 				pkt.pts -= av_rescale_q(delta, AV_TIME_BASE_Q,
@@ -64,7 +69,8 @@ void FFmpegStream::adjustTimeStamps(AVPacket pkt) {
 	}
 }
 
-void FFmpegStream::initPts() {
+template <class Decoded>
+void FFmpegStream<Decoded>::initPts() {
 	pts = avStream.avg_frame_rate.num ?
 			-avStream.codec->has_b_frames * AV_TIME_BASE
 					/ av_q2d(avStream.avg_frame_rate) :
@@ -75,17 +81,23 @@ void FFmpegStream::initPts() {
 }
 
 FFmpegVideoStream::FFmpegVideoStream(AVStream* avs, AVFormatContext* ctx) :
-		FFmpegStream(avs, ctx, true) {
+		FFmpegStream(avs, ctx, true, "FFmpegVideoStream") {
 
 }
 
 FFmpegAudioStream::FFmpegAudioStream(AVStream* avs, AVFormatContext* ctx) :
-		FFmpegStream(avs, ctx, true) {
+		FFmpegStream(avs, ctx, true, "FFmpegAudioStream") {
 	sampleSize = 0;
-	av_free(samples);
+	samples = NULL;
 }
 
-FFmpegStream FFmpegAudioStream::operator <<(AVPacket pkt) {
+FFmpegAudioStream::~FFmpegAudioStream() {
+	if (samples != NULL) {
+		av_free(samples);
+	}
+}
+
+void FFmpegAudioStream::put(AVPacket pkt) {
 	adjustTimeStamps(pkt);
 	checkAndAllocateSampleBuffer(pkt);
 
@@ -112,21 +124,23 @@ FFmpegStream FFmpegAudioStream::operator <<(AVPacket pkt) {
 		// do this later
 		//		ist->next_pts += ((int64_t) AV_TIME_BASE / bps * decoded_data_size)
 		//				/ (ist->st->codec->sample_rate * ist->st->codec->channels);
-		cout << "Got audio dts=" << pkt.dts << " pts=" << pkt.pts << endl;
+		LOG4CPLUS_DEBUG(logger,
+				"Got audio dts=" << pkt.dts << " pts=" << pkt.pts);
 	}
-	return *this;
 }
 
 void FFmpegAudioStream::checkAndAllocateSampleBuffer(AVPacket pkt) {
 	int max = FFMAX(pkt.size*sizeof(*samples), AVCODEC_MAX_AUDIO_FRAME_SIZE);
 	if (sampleSize < max) {
 		sampleSize = max;
-		av_free(samples);
+		if (samples != NULL) {
+			av_free(samples);
+		}
 		samples = (int16_t*) av_malloc(sampleSize);
 	}
 }
 
-FFmpegStream FFmpegVideoStream::operator <<(AVPacket pkt) {
+void FFmpegVideoStream::put(AVPacket pkt) {
 	adjustTimeStamps(pkt);
 	AVFrame pFrame;
 	int gotPicture = 0;
@@ -140,6 +154,7 @@ FFmpegStream FFmpegVideoStream::operator <<(AVPacket pkt) {
 		int ret = avcodec_decode_video2(avStream.codec, &pFrame, &gotPicture,
 				&pkt);
 		avStream.quality = pFrame.quality;
+
 		if (ret < 0) {
 			string msg;
 			msg = "Failed to decode video dts=";
@@ -151,7 +166,11 @@ FFmpegStream FFmpegVideoStream::operator <<(AVPacket pkt) {
 		}
 		if (gotPicture) {
 			// deal with the picture
-			cout << "Got picture dts=" << pkt.dts << " pts=" << pkt.pts << endl;
+			LOG4CPLUS_DEBUG(logger,
+					"Got picture dts=" << pkt.dts << " pts=" << pkt.pts);
+			AVPicture p = (AVPicture&) pFrame;
+			Picture pict(p, avStream.codec->pix_fmt, avStream.codec->width, avStream.codec->height, pkt.pts, pkt.dts);
+
 		}
 		// deal with this
 		//	if (avStream.codec->time_base.num != 0) {
@@ -162,24 +181,26 @@ FFmpegStream FFmpegVideoStream::operator <<(AVPacket pkt) {
 		//				/ ist->st->codec->time_base.den;
 		//	}
 	}
-	return *this;
 }
 
-FFmpegStream* FFmpegStreamFactory::createStream(AVStream *stream, AVFormatContext* fc) {
+template <class Decoded>
+FFmpegStream<Decoded> FFmpegStreamFactory<Decoded>::createStream(AVStream *stream,
+		AVFormatContext* fc) {
 	switch (stream->codec->codec_type) {
 	case AVMEDIA_TYPE_VIDEO:
-		cout << "Creating video stream" << endl;
-		return new FFmpegVideoStream(stream, fc);
+		LOG4CPLUS_WARN(logger, "Creating video stream");
+		return FFmpegVideoStream(stream, fc);
 	case AVMEDIA_TYPE_AUDIO:
-		cout << "Creating audio stream" << endl;
-		return new FFmpegAudioStream(stream, fc);
+		LOG4CPLUS_WARN(logger, "Creating audio stream");
+		return FFmpegAudioStream(stream, fc);
 	case AVMEDIA_TYPE_DATA:
 	case AVMEDIA_TYPE_NB:
 	case AVMEDIA_TYPE_SUBTITLE:
 	case AVMEDIA_TYPE_UNKNOWN:
 	case AVMEDIA_TYPE_ATTACHMENT:
 	default:
-		cout << "Creating unknown stream " << stream->codec->codec_type << endl;
-		return new FFmpegStream(stream, fc, false);
+		LOG4CPLUS_DEBUG(logger,
+				"Creating unknown stream " << stream->codec->codec_type);
+		return FFmpegStream<Unit>(stream, fc, false, "FFmpegStream");
 	}
 }

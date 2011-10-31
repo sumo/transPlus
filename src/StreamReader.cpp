@@ -8,22 +8,24 @@
 #include "StreamReader.hpp"
 
 StreamReader::StreamReader(istream& input) :
-	ios(input) {
+		ios(input) {
+	logger = Logger::getInstance(LOG4CPLUS_TEXT("StreamReader"));
 }
 
 StreamReader::~StreamReader() {
-	// TODO Auto-generated destructor stub
+
 }
 
 int StreamReader::read(uint8_t *buf, int buf_size) {
 	if (ios.eof()) {
-		cout << "Read complete" << endl;
+		LOG4CPLUS_DEBUG(logger, "Read complete");
 		return -1;
 	} else {
-		ios.read(reinterpret_cast<char*> (buf), buf_size);
+		ios.read(reinterpret_cast<char*>(buf), buf_size);
 		int outcome = ios.fail() ? ios.gcount() : buf_size;
-		cout << "Read asked " << buf_size << " read " << outcome << endl;
-		if(ios.fail() || ios.eof()) {
+		LOG4CPLUS_DEBUG(logger,
+				"Read asked " << buf_size << " read " << outcome);
+		if (ios.fail() || ios.eof()) {
 			ios.clear(std::ios_base::failbit);
 			ios.clear(std::ios_base::eofbit);
 		}
@@ -32,35 +34,34 @@ int StreamReader::read(uint8_t *buf, int buf_size) {
 }
 
 int64_t StreamReader::seek(int64_t offset, int whence) {
-	cout << "Seek: " << offset << " whence:";
+	LOG4CPLUS_DEBUG(logger, "Seek: " << offset << " whence:");
 	switch (whence) {
 	case AVSEEK_SIZE:
-		cout << "AVSEEK_SIZE" << endl;
+		LOG4CPLUS_DEBUG(logger, "AVSEEK_SIZE");
 		return -1;
 	case SEEK_SET:
-		cout << "SEEK_SET" << endl;
+		LOG4CPLUS_DEBUG(logger, "SEEK_SET");
 		if (offset < 0) {
 			return -1;
 		} else {
 			ios.seekg(offset, ios_base::beg);
-			cout << "Seek resulted in " << (ios.fail() || ios.eof() ? -1
-					: (int64_t) (ios.tellg()));
-			cout << endl;
+			LOG4CPLUS_DEBUG(
+					logger,
+					"Seek resulted in " << (ios.fail() || ios.eof() ? -1 : (int64_t) (ios.tellg())));
 			return ios.fail() || ios.eof() ? -1 : (int64_t) ios.tellg();
 		}
 	case SEEK_CUR:
-		cout << "SEEK_CUR to " << ios.tellg() + offset << endl;
+		LOG4CPLUS_DEBUG(logger, "SEEK_CUR to " << ios.tellg() + offset);
 		ios.seekg(ios.tellg() + offset);
 		return ios.fail() || ios.eof() ? -1 : (int64_t) ios.tellg();
 	case SEEK_END:
-		cout << "SEEK_END" << endl;
+		LOG4CPLUS_DEBUG(logger, "SEEK_END");
 		ios.seekg(offset, ios_base::end);
-		cout << "Seek resulted in " << (ios.fail() ? -39
-				: (int64_t) (ios.tellg()));
-		cout << endl;
+		LOG4CPLUS_DEBUG(
+				logger,
+				"Seek resulted in " << (ios.fail() ? -39 : (int64_t) (ios.tellg())));
 		return ios.fail() || ios.eof() ? -1 : (int64_t) (ios.tellg());
-	}
-	cout << whence << endl;
+	}LOG4CPLUS_DEBUG(logger, whence);
 	return -1;
 }
 
