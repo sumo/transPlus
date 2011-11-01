@@ -33,6 +33,10 @@ TranscodeException::TranscodeException(const char* cpmsg, int avErrorCode) {
 	append(avErrorCode);
 }
 
+TranscodeException::TranscodeException(const char* cpmsg) {
+	msg = string(cpmsg);
+}
+
 TranscodeException::~TranscodeException() throw () {
 
 }

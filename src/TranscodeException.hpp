@@ -26,6 +26,7 @@ public:
 	TranscodeException(int avErrorCode);
 	TranscodeException(string &msg, int avErrorCode);
 	TranscodeException(const char*, int avErrorCode);
+	TranscodeException(const char*);
 	virtual const char* what() const throw();
 	virtual ~TranscodeException() throw();
 };

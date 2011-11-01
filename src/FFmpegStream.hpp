@@ -23,19 +23,17 @@ extern "C" {
 
 using namespace log4cplus;
 
-template <class Decoded>
 class FFmpegStream {
 
 protected:
-	AVStream avStream;
-	AVCodec codec;
-	AVFormatContext formatContext;
+	AVStream* avStream;
+	AVCodec* codec;
+	AVFormatContext* formatContext;
 	int bps;
 	int nextPts;
 	bool start;
 	double pts;
 	Logger logger;
-	queue<DecodedDataObserver<Decoded> > observers;
 
 public:
 	static const float dtsDeltaThreshold = 10;
@@ -44,38 +42,38 @@ public:
 	virtual void put(AVPacket);
 	virtual void initPts();
 	virtual void adjustTimeStamps(AVPacket);
-	void notifyObservers(Decoded);
-	void addObserver(DecodedDataObserver<Decoded>);
-
 };
 
-class FFmpegVideoStream: public FFmpegStream<Picture> {
+template<class DecodedData>
+class FFmpegStreamNotifier: public DecodedDataNotifier<DecodedData> {
+	virtual DecodedData putImpl(AVPacket);
+	virtual bool isValid(DecodedData);
+public:
+	void put(AVPacket);
+	virtual ~FFmpegStreamNotifier();
+};
+
+class FFmpegVideoStream: public FFmpegStream, FFmpegStreamNotifier<Picture> {
+	virtual Picture putImpl(AVPacket);
+	virtual bool isValid(Picture);
 public:
 	FFmpegVideoStream(AVStream*, AVFormatContext*);
-	virtual void put(AVPacket);
+
 };
 
-class FFmpegAudioStream: public FFmpegStream<Sound> {
+class FFmpegAudioStream: public FFmpegStream, FFmpegStreamNotifier<Sound> {
 	int sampleSize;
 	int16_t *samples;
 	void checkAndAllocateSampleBuffer(AVPacket);
+	virtual Sound putImpl(AVPacket);
+	virtual bool isValid(Sound);
 public:
 	FFmpegAudioStream(AVStream*, AVFormatContext*);
-	virtual void put(AVPacket);
+
 	virtual ~FFmpegAudioStream();
 };
 
-struct Unit {
-};
-
-template <class Decoded>
-class FFmpegStreamFactory {
-	Logger logger;
-public:
-	FFmpegStream<Decoded> createStream(AVStream*, AVFormatContext*);
-	FFmpegStreamFactory() {
-		logger = Logger::getInstance("FFmpegStreamFactory");
-	}
-};
+static Picture NoPicture(NULL, PIX_FMT_NONE, 0, 0, 0, 0);
+static Sound NoSound(0, 0);
 
 #endif /* FFMPEGSTREAM_H_ */

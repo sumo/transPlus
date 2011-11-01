@@ -8,8 +8,7 @@
 #include "StreamReader.hpp"
 
 StreamReader::StreamReader(istream& input) :
-		ios(input) {
-	logger = Logger::getInstance(LOG4CPLUS_TEXT("StreamReader"));
+		ios(input), logger(Logger::getInstance(LOG4CPLUS_TEXT("StreamReader"))) {
 }
 
 StreamReader::~StreamReader() {

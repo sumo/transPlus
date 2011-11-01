@@ -7,15 +7,15 @@
 
 #include "Picture.hpp"
 
-Picture::Picture(AVPicture sourcePic, PixelFormat pixFormat, int width,
+Picture::Picture(AVPicture* sourcePic, PixelFormat pixFormat, int width,
 		int height, int64_t pts, int64_t dts) :
 		pts(pts), dts(dts) {
-	avpicture_alloc(&dstPic, pixFormat, width, height);
-	av_picture_copy(&dstPic, &sourcePic, pixFormat, width, height);
+	avpicture_alloc(dstPic, pixFormat, width, height);
+	av_picture_copy(dstPic, sourcePic, pixFormat, width, height);
 }
 
 Picture::~Picture() {
-	avpicture_free(&dstPic);
+	avpicture_free(dstPic);
 }
 
 Sound::Sound(uint8_t *src, int size) {

@@ -9,7 +9,6 @@
 #define PICTURE_H_
 #include "fixstdint.hpp"
 #include <queue>
-#include "DecodedDataObserver.hpp"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -18,11 +17,11 @@ extern "C" {
 using namespace std;
 
 class Picture {
-	AVPicture dstPic;
+	AVPicture* dstPic;
 	int64_t pts;
 	int64_t dts;
 public:
-	Picture(AVPicture sourcePic, PixelFormat pixFormat, int width, int height,
+	Picture(AVPicture* sourcePic, PixelFormat pixFormat, int width, int height,
 			int64_t pts, int64_t dts);
 	virtual ~Picture();
 };

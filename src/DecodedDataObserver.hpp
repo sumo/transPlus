@@ -1,20 +1,29 @@
 /*
- * DecodedDataObserver.h
+ * DecodedDataObserver.hpp
  *
- *  Created on: 31 Oct 2011
+ *  Created on: 1 Nov 2011
  *      Author: mediabag
  */
 
-#ifndef DECODEDDATAOBSERVER_H_
-#define DECODEDDATAOBSERVER_H_
+#ifndef DECODEDDATAOBSERVER_HPP_
+#define DECODEDDATAOBSERVER_HPP_
+#include <vector>
 
+using namespace std;
 template<class DecodedData>
 class DecodedDataObserver {
 public:
 	DecodedDataObserver();
 	virtual ~DecodedDataObserver();
 public:
-	virtual void dataDecoded(DecodedData) = 0;
+	virtual void dataDecoded(DecodedData);
 };
 
-#endif /* DECODEDDATAOBSERVER_H_ */
+template<class DecodedData>
+class DecodedDataNotifier {
+	vector<DecodedDataObserver<DecodedData> > observers;
+public:
+	void notifyObservers(DecodedData);
+	void addObserver(DecodedDataObserver<DecodedData>);
+};
+#endif /* DECODEDDATAOBSERVER_HPP_ */
