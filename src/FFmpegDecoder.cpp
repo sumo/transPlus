@@ -8,67 +8,96 @@
 #include "FFmpegDecoder.hpp"
 
 FFmpegDecoder::FFmpegDecoder(StreamReader sr) :
-		streamReader(sr), logger(Logger::getInstance(LOG4CPLUS_TEXT("FFmpegDecoder"))) {
+		streamReader(sr), logger(
+				Logger::getInstance(LOG4CPLUS_TEXT("FFmpegDecoder"))), streamsExtracted(
+				false), formatProbed(false) {
 }
 
 FFmpegDecoder::~FFmpegDecoder() {
-	// TODO Auto-generated destructor stub
-}
-
-void FFmpegDecoder::probe() {
-	unsigned char* buffer = new unsigned char[4096 + AVPROBE_PADDING_SIZE];
-	AVProbeData *probeData = new AVProbeData;
-	probeData->buf = buffer;
-	probeData->buf_size = 4096;
-	fmt = av_probe_input_format(probeData, 1);
-	delete buffer;
-	if (fmt != NULL) {
-		LOG4CPLUS_INFO(logger,
-				"Probe successful: " << fmt->name << ": " << fmt->long_name);
-		probeInfo[string(fmt->name)] = string(fmt->long_name);
-	} else {
-		throw new TranscodeException("Failed to probe format");
+	if (formatContext != NULL) {
+		 avformat_free_context(formatContext);
+	}
+	if(context != NULL) {
+		av_free(context);
+	}
+	if(buffer != NULL) {
+		delete[] buffer;
 	}
 }
 
-void FFmpegDecoder::extractStreams() {
-	unsigned char* buffer = new unsigned char[4096 + AVPROBE_PADDING_SIZE];
-	AVIOContext *context = avio_alloc_context(buffer, 4096, URL_RDONLY,
-			(void*) &streamReader, StreamReader::readFunction, NULL,
-			StreamReader::seekFunction);
-	formatContext = new AVFormatContext;
-	if (int i = av_open_input_stream(&formatContext, context, "", fmt, NULL) < 0) {
-		throw new TranscodeException(i);
-	}
+map<string, string> FFmpegDecoder::getFormat() {
+	if (!formatProbed) {
+		u_int8_t* buffer = new u_int8_t[BUFFER_SIZE];
+		streamReader.rewind();
+		streamReader.read(buffer, 4096);
+		streamReader.rewind();
+		AVProbeData *probeData = new AVProbeData;
+		probeData->buf = buffer;
+		probeData->buf_size = 4096;
+		fmt = av_probe_input_format(probeData, 1);
+		delete[] buffer;
+		delete probeData;
 
-	LOG4CPLUS_INFO(logger, "Format: " << formatContext->iformat->name);
-	AVStream** avStreams = formatContext->streams;
-	for (unsigned int i = 0; i < formatContext->nb_streams; i++) {
-		AVStream *stream = avStreams[i];
-		switch (stream->codec->codec_type) {
-		case AVMEDIA_TYPE_VIDEO:
-			LOG4CPLUS_WARN(logger, "Creating video stream");
-			ffStreams.push_back(FFmpegVideoStream(stream, formatContext));
-			break;
-		case AVMEDIA_TYPE_AUDIO:
-			LOG4CPLUS_WARN(logger, "Creating audio stream");
-			ffStreams.push_back(FFmpegAudioStream(stream, formatContext));
-			break;
-		case AVMEDIA_TYPE_DATA:
-		case AVMEDIA_TYPE_NB:
-		case AVMEDIA_TYPE_SUBTITLE:
-		case AVMEDIA_TYPE_UNKNOWN:
-		case AVMEDIA_TYPE_ATTACHMENT:
-		default:
-			LOG4CPLUS_DEBUG(logger,
-					"Creating unknown stream " << stream->codec->codec_type);
-			ffStreams.push_back(FFmpegStream(stream, formatContext, false, "FFmpegStream"));
-			break;
+		if (fmt != NULL) {
+			LOG4CPLUS_DEBUG(
+					logger,
+					"Probe successful: " << fmt->name << ": " << fmt->long_name);
+			probeInfo[string(fmt->name)] = string(fmt->long_name);
+			formatProbed = true;
+		} else {
+			throw TranscodeException("Failed to probe format");
 		}
 	}
+	return probeInfo;
+}
 
-	LOG4CPLUS_INFO(logger, "Found " << ffStreams.size() << " streams");
+boost::ptr_vector<FFmpegStream>* FFmpegDecoder::getStreams() {
+	if (!streamsExtracted) {
+		buffer = new unsigned char[BUFFER_SIZE];
+		context = avio_alloc_context(buffer, 4096, URL_RDONLY,
+				(void*) &streamReader, StreamReader::readFunction, NULL,
+				StreamReader::seekFunction);
+		formatContext = new AVFormatContext;
+		if (int i = av_open_input_stream(&formatContext, context, "", fmt, NULL) < 0) {
+			throw TranscodeException(i);
+		}
 
+		LOG4CPLUS_DEBUG(logger,
+				"Format: " << string(formatContext->iformat->name));
+		AVStream** avStreams = formatContext->streams;
+		for (unsigned int i = 0; i < formatContext->nb_streams; i++) {
+			AVStream *stream = avStreams[i];
+			switch (stream->codec->codec_type) {
+			case AVMEDIA_TYPE_VIDEO:
+				LOG4CPLUS_DEBUG(logger, "Creating video stream");
+				ffStreams.push_back(
+						new FFmpegVideoStream(stream, formatContext));
+				break;
+			case AVMEDIA_TYPE_AUDIO:
+				LOG4CPLUS_DEBUG(logger, "Creating audio stream");
+				ffStreams.push_back(
+						new FFmpegAudioStream(stream, formatContext));
+				break;
+			case AVMEDIA_TYPE_DATA:
+			case AVMEDIA_TYPE_NB:
+			case AVMEDIA_TYPE_SUBTITLE:
+			case AVMEDIA_TYPE_UNKNOWN:
+			case AVMEDIA_TYPE_ATTACHMENT:
+			default:
+				LOG4CPLUS_DEBUG(
+						logger,
+						"Creating unknown stream " << stream->codec->codec_type);
+				ffStreams.push_back(
+						new FFmpegStream(stream, formatContext, false,
+								"FFmpegStream"));
+				break;
+			}
+		}
+
+		LOG4CPLUS_INFO(logger, "Found " << ffStreams.size() << " streams");
+		streamsExtracted = true;
+	}
+	return &ffStreams;
 }
 
 void FFmpegDecoder::runDecodeLoop() {
@@ -92,7 +121,7 @@ void FFmpegDecoder::runDecodeLoop() {
 		} else {
 			int streamIdx = pkt.stream_index;
 			if (streamIdx < ffStreams.size()) {
-				FFmpegStream ffStream = ffStreams[streamIdx];
+				FFmpegStream& ffStream = ffStreams[streamIdx];
 				ffStream.put(pkt);
 			} else {
 				LOG4CPLUS_DEBUG(logger, "Ignoring new stream " << streamIdx);

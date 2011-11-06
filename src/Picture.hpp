@@ -9,6 +9,7 @@
 #define PICTURE_H_
 #include "fixstdint.hpp"
 #include <queue>
+#include "TranscodeException.hpp"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -17,13 +18,15 @@ extern "C" {
 using namespace std;
 
 class Picture {
-	AVPicture* dstPic;
+	AVFrame picture;
 	int64_t pts;
 	int64_t dts;
+	bool allocated;
 public:
 	Picture(AVPicture* sourcePic, PixelFormat pixFormat, int width, int height,
 			int64_t pts, int64_t dts);
 	virtual ~Picture();
+	AVPicture* getPicture();
 };
 
 class Sound {

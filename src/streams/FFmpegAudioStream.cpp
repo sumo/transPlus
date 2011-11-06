@@ -19,11 +19,11 @@ FFmpegAudioStream::~FFmpegAudioStream() {
 	}
 }
 
-bool FFmpegAudioStream::isValid(Sound s) {
-	return &s != &NoSound;
+bool FFmpegAudioStream::isValid(Sound* s) {
+	return s != NoSound;
 }
 
-Sound FFmpegAudioStream::putImpl(AVPacket pkt) {
+Sound* FFmpegAudioStream::putImpl(AVPacket pkt) {
 	adjustTimeStamps(pkt);
 	checkAndAllocateSampleBuffer(pkt);
 

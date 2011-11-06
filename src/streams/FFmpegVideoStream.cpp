@@ -15,11 +15,11 @@ FFmpegVideoStream::FFmpegVideoStream(AVStream* avs, AVFormatContext* ctx) :
 FFmpegVideoStream::~FFmpegVideoStream() {
 }
 
-bool FFmpegVideoStream::isValid(Picture s) {
-	return &s != &NoPicture;
+bool FFmpegVideoStream::isValid(Picture* s) {
+	return s != NoPicture;
 }
 
-Picture FFmpegVideoStream::putImpl(AVPacket pkt) {
+Picture* FFmpegVideoStream::putImpl(AVPacket pkt) {
 	adjustTimeStamps(pkt);
 	AVFrame pFrame;
 	int gotPicture = 0;
@@ -47,7 +47,8 @@ Picture FFmpegVideoStream::putImpl(AVPacket pkt) {
 			// deal with the picture
 			LOG4CPLUS_DEBUG(logger,
 					"Got picture dts=" << pkt.dts << " pts=" << pkt.pts);
-			Picture pict((AVPicture*) &pFrame, avStream->codec->pix_fmt,
+
+			Picture* pict = new Picture((AVPicture*) &pFrame, avStream->codec->pix_fmt,
 					avStream->codec->width, avStream->codec->height, pkt.pts,
 					pkt.dts);
 			return pict;

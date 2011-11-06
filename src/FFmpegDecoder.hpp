@@ -7,35 +7,34 @@
 
 #ifndef FFMPEGDECODER_H_
 #define FFMPEGDECODER_H_
+#include "streams/FFmpegStream.hpp"
+#include "streams/FFmpegAudioStream.hpp"
+#include "streams/FFmpegVideoStream.hpp"
+#include "streams/StreamReader.hpp"
 #include "fixstdint.hpp"
-#include <iostream>
-#include <map>
-#include <fstream>
-#include <vector>
-#include <boost/shared_ptr.hpp>
 #include <log4cplus/logger.h>
 #include <log4cplus/configurator.h>
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-}
-#include "StreamReader.hpp"
-#include "FFmpegStream.hpp"
-#include "TranscodeException.hpp"
+#include <boost/ptr_container/ptr_vector.hpp>
 
 using namespace log4cplus;
+using namespace std;
 class FFmpegDecoder {
 	StreamReader& streamReader;
 	AVInputFormat *fmt;
-	const Logger& logger;
+	const Logger logger;
 	map<string, string> probeInfo;
 	AVFormatContext *formatContext;
-	vector<FFmpegStream> ffStreams;
+	AVIOContext *context;
+	boost::ptr_vector<FFmpegStream> ffStreams;
+	bool streamsExtracted;
+	bool formatProbed;
+	const static int BUFFER_SIZE = 4096 + AVPROBE_PADDING_SIZE;
+	unsigned char* buffer;
 public:
 	FFmpegDecoder(StreamReader);
 	virtual ~FFmpegDecoder();
-	void probe();
-	void extractStreams();
+	map<string, string> getFormat();
+	boost::ptr_vector<FFmpegStream>* getStreams();
 	void runDecodeLoop();
 
 };

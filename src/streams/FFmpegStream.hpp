@@ -58,8 +58,8 @@ template<class DecodedData>
 class FFmpegDataGenerator: public FFmpegStream {
 	vector<DecodedDataObserver<DecodedData> > observers;
 protected:
-	virtual DecodedData putImpl(AVPacket)=0;
-	virtual bool isValid(DecodedData)=0;
+	virtual DecodedData* putImpl(AVPacket)=0;
+	virtual bool isValid(DecodedData*)=0;
 	void notifyObservers(DecodedData data) {
 		typedef typename vector<DecodedDataObserver<DecodedData> >::iterator Itr;
 		Itr it;
@@ -74,9 +74,10 @@ public:
 	}
 
 	void put(AVPacket avp) {
-		DecodedData data = putImpl(avp);
+		DecodedData* data = putImpl(avp);
 		if (isValid(data)) {
-			notifyObservers(data);
+			notifyObservers(*data);
+			delete data;
 		}
 	}
 	virtual ~FFmpegDataGenerator() {

@@ -10,20 +10,14 @@
 #include <vector>
 
 using namespace std;
+
 template<class DecodedData>
 class DecodedDataObserver {
 public:
 	DecodedDataObserver();
 	virtual ~DecodedDataObserver();
 public:
-	virtual void dataDecoded(DecodedData);
+	virtual void dataDecoded(DecodedData) = 0;
 };
 
-template<class DecodedData>
-class DecodedDataNotifier {
-	vector<DecodedDataObserver<DecodedData> > observers;
-public:
-	void notifyObservers(DecodedData);
-	void addObserver(DecodedDataObserver<DecodedData>);
-};
 #endif /* DECODEDDATAOBSERVER_HPP_ */

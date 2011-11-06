@@ -6,8 +6,8 @@
 
 class FFmpegVideoStream: public FFmpegDataGenerator<Picture> {
 protected:
-	virtual Picture putImpl(AVPacket);
-	virtual bool isValid(Picture);
+	virtual Picture* putImpl(AVPacket);
+	virtual bool isValid(Picture*);
 
 public:
 	FFmpegVideoStream(AVStream*, AVFormatContext*);
@@ -18,6 +18,6 @@ public:
 
 };
 
-static Picture NoPicture(NULL, PIX_FMT_NONE, 1, 1, 0, 0);
+static Picture* NoPicture = new Picture(NULL, PIX_FMT_NONE, 0, 0, 0, 0);
 
 #endif

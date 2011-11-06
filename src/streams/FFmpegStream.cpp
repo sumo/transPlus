@@ -10,7 +10,9 @@
 using namespace std;
 
 FFmpegStream::FFmpegStream(AVStream* avs, AVFormatContext* fc, bool findCodec,
-		string streamName):avStream(avs), formatContext(fc), logger(Logger::getInstance(LOG4CPLUS_TEXT(streamName))) {
+		string streamName) :
+		avStream(avs), formatContext(fc), logger(
+				Logger::getInstance(LOG4CPLUS_TEXT(streamName))) {
 	if (findCodec) {
 		codec = avcodec_find_decoder(avs->codec->codec_id);
 		int open = avcodec_open(avStream->codec, codec);
@@ -23,7 +25,7 @@ FFmpegStream::FFmpegStream(AVStream* avs, AVFormatContext* fc, bool findCodec,
 }
 
 FFmpegStream::~FFmpegStream() {
-
+	avcodec_close(avStream->codec);
 }
 
 void FFmpegStream::put(AVPacket pkt) {

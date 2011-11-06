@@ -18,8 +18,8 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 }
-#include "StreamReader.hpp"
-#include "FFmpegStream.hpp"
+#include "streams/StreamReader.hpp"
+#include "FFmpegDecoder.hpp"
 
 using namespace std;
 
@@ -45,13 +45,19 @@ int main(int argc, char* argv[]) {
 		LOG4CPLUS_DEBUG(logger, it->first << ": " << it->second);
 	}
 
-	unsigned char* buffer = new unsigned char[4096 + AVPROBE_PADDING_SIZE];
-
 	LOG4CPLUS_INFO(logger, "Using file name " << filename);
 	ifstream src;
 	src.open(filename.c_str(), ios::binary);
-	src.read(reinterpret_cast<char*>(buffer), 4096);
-	src.seekg(ios_base::beg);
 	StreamReader reader(src);
-
+	FFmpegDecoder decoder(reader);
+	map<string, string> m = decoder.getFormat();
+	LOG4CPLUS_INFO(logger,
+			"Format of content stream is " << (*m.begin()).second);
+	boost::ptr_vector<FFmpegStream> *streams = decoder.getStreams();
+	typedef typename boost::ptr_vector<FFmpegStream>::iterator Itr;
+	Itr it;
+	for (it = streams->begin(); it < streams->end(); it++) {
+		LOG4CPLUS_INFO(logger, "Found stream " << it->getType() << " of codec " << it->getCodec());
+	}
+	decoder.runDecodeLoop();
 }

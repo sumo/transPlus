@@ -9,8 +9,8 @@ class FFmpegAudioStream: public FFmpegDataGenerator<Sound> {
 	int16_t *samples;
 	void checkAndAllocateSampleBuffer(AVPacket);
 protected:
-	virtual Sound putImpl(AVPacket);
-	virtual bool isValid(Sound);
+	virtual Sound* putImpl(AVPacket);
+	virtual bool isValid(Sound*);
 public:
 	FFmpegAudioStream(AVStream*, AVFormatContext*);
 	virtual ~FFmpegAudioStream();
@@ -19,5 +19,5 @@ public:
 	}
 };
 
-static Sound NoSound(0, 0);
+static Sound* NoSound = new Sound(0, 0);
 #endif
