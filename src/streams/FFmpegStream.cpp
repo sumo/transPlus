@@ -25,7 +25,6 @@ FFmpegStream::FFmpegStream(AVStream* avs, AVFormatContext* fc, bool findCodec,
 }
 
 FFmpegStream::~FFmpegStream() {
-	avcodec_close(avStream->codec);
 }
 
 void FFmpegStream::put(AVPacket pkt) {

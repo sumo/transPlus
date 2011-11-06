@@ -12,10 +12,6 @@ Picture::Picture(AVPicture* sourcePic, PixelFormat pixFormat, int width,
 		pts(pts), dts(dts), allocated(false) {
 	if (width > 0 && height > 0) {
 		avcodec_get_frame_defaults(&picture);
-		int ret = avpicture_alloc((AVPicture*)&picture, pixFormat, width, height);
-		if (ret < 0) {
-			throw TranscodeException(ret);
-		}
 		av_picture_copy((AVPicture*)&picture, sourcePic, pixFormat, width, height);
 		allocated = true;
 	}
@@ -23,7 +19,7 @@ Picture::Picture(AVPicture* sourcePic, PixelFormat pixFormat, int width,
 
 Picture::~Picture() {
 	if (allocated) {
-		av_free(picture.data[0]);
+		avpicture_free((AVPicture*)&picture);
 	}
 }
 

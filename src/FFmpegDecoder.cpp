@@ -34,6 +34,7 @@ map<string, string> FFmpegDecoder::getFormat() {
 		AVProbeData *probeData = new AVProbeData;
 		probeData->buf = buffer;
 		probeData->buf_size = 4096;
+		probeData->filename = "";
 		fmt = av_probe_input_format(probeData, 1);
 		delete[] buffer;
 		delete probeData;
