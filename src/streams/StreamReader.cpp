@@ -22,7 +22,7 @@ void StreamReader::rewind() {
 int StreamReader::read(uint8_t *buf, int buf_size) {
 	if (ios.eof()) {
 		LOG4CPLUS_DEBUG(logger, "Read complete");
-		return -1;
+		return EOF;
 	} else {
 		ios.read(reinterpret_cast<char*>(buf), buf_size);
 		int outcome = ios.fail() ? ios.gcount() : buf_size;
@@ -37,35 +37,39 @@ int StreamReader::read(uint8_t *buf, int buf_size) {
 }
 
 int64_t StreamReader::seek(int64_t offset, int whence) {
-	LOG4CPLUS_DEBUG(logger, "Seek: " << offset << " whence:");
+	int result = -1;
 	switch (whence) {
 	case AVSEEK_SIZE:
 		LOG4CPLUS_DEBUG(logger, "AVSEEK_SIZE");
 		return -1;
 	case SEEK_SET:
-		LOG4CPLUS_DEBUG(logger, "SEEK_SET");
 		if (offset < 0) {
-			return -1;
+			LOG4CPLUS_DEBUG(logger,
+					"SEEK_SET to negative offset of " << offset);
 		} else {
 			ios.seekg(offset, ios_base::beg);
-			LOG4CPLUS_DEBUG(
-					logger,
-					"Seek resulted in " << (ios.fail() || ios.eof() ? -1 : (int64_t) (ios.tellg())));
-			return ios.fail() || ios.eof() ? -1 : (int64_t) ios.tellg();
+			result = (ios.fail() || ios.eof() ? -1 : (int64_t) ((ios.tellg())));
+			LOG4CPLUS_DEBUG( logger,
+					"SEEK_SET to " << offset << " resulted in " << result);
 		}
+		break;
 	case SEEK_CUR:
-		LOG4CPLUS_DEBUG(logger, "SEEK_CUR to " << ios.tellg() + offset);
 		ios.seekg(ios.tellg() + offset);
-		return ios.fail() || ios.eof() ? -1 : (int64_t) ios.tellg();
+		result = (ios.fail() || ios.eof() ? -1 : (int64_t) ((ios.tellg())));
+		LOG4CPLUS_DEBUG(logger, "SEEK_CUR to " << ios.tellg() + offset << " resulted in " << result);
+		break;
 	case SEEK_END:
-		LOG4CPLUS_DEBUG(logger, "SEEK_END");
 		ios.seekg(offset, ios_base::end);
+		result = ios.fail() || ios.eof() ? -1 : (int64_t) (ios.tellg());
 		LOG4CPLUS_DEBUG(
 				logger,
-				"Seek resulted in " << (ios.fail() ? -39 : (int64_t) (ios.tellg())));
-		return ios.fail() || ios.eof() ? -1 : (int64_t) (ios.tellg());
-	}LOG4CPLUS_DEBUG(logger, whence);
-	return -1;
+				"SEEK_END resulted in " << result);
+		break;
+	default:
+		LOG4CPLUS_DEBUG(logger, "Unknown whence " << whence);
+		break;
+	}
+	return result;
 }
 
 int StreamReader::readFunction(void* opaque, uint8_t *buf, int buf_size) {

@@ -13,15 +13,15 @@ extern "C" {
 #define TRANSCODEEXCEPTION_H_
 
 #include <exception>
-#include <string>
+#include <sstream>
 
 using namespace std;
 class TranscodeException: public std::exception {
-	string msg;
-	string avStrError(int errorCode);
+	stringstream msg;
 	void append(int avErrorCode);
 public:
 	TranscodeException();
+	TranscodeException(const TranscodeException&);
 	TranscodeException(string &msg);
 	TranscodeException(int avErrorCode);
 	TranscodeException(string &msg, int avErrorCode);

@@ -15,12 +15,13 @@ FFmpegDecoder::FFmpegDecoder(StreamReader sr) :
 
 FFmpegDecoder::~FFmpegDecoder() {
 	if (formatContext != NULL) {
-		 avformat_free_context(formatContext);
+		av_close_input_stream(formatContext);
+		avformat_free_context(formatContext);
 	}
-	if(context != NULL) {
+	if (context != NULL) {
 		av_free(context);
 	}
-	if(buffer != NULL) {
+	if (buffer != NULL) {
 		delete[] buffer;
 	}
 }
@@ -44,6 +45,7 @@ map<string, string> FFmpegDecoder::getFormat() {
 					logger,
 					"Probe successful: " << fmt->name << ": " << fmt->long_name);
 			probeInfo[string(fmt->name)] = string(fmt->long_name);
+			//fmt->flags |= AVFMT_NOFILE;
 			formatProbed = true;
 		} else {
 			throw TranscodeException("Failed to probe format");
@@ -55,11 +57,14 @@ map<string, string> FFmpegDecoder::getFormat() {
 boost::ptr_vector<FFmpegStream>* FFmpegDecoder::getStreams() {
 	if (!streamsExtracted) {
 		buffer = new unsigned char[BUFFER_SIZE];
-		context = avio_alloc_context(buffer, 4096, URL_RDONLY,
+		context = avio_alloc_context(buffer, 4096, 0,
 				(void*) &streamReader, StreamReader::readFunction, NULL,
 				StreamReader::seekFunction);
-		formatContext = new AVFormatContext;
-		if (int i = av_open_input_stream(&formatContext, context, "", fmt, NULL) < 0) {
+		context->buf_end=context->buf_ptr;
+		formatContext = avformat_alloc_context();
+		formatContext->pb = context;
+		int i = avformat_open_input(&formatContext, "", fmt, NULL);
+		if (i < 0) {
 			throw TranscodeException(i);
 		}
 

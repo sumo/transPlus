@@ -7,34 +7,34 @@
 
 #include "TranscodeException.hpp"
 
-TranscodeException::TranscodeException(string &m) {
-	msg = m;
+TranscodeException::TranscodeException(string &m):msg(m) {
 
 }
 
-TranscodeException::TranscodeException(string &m, int avErrorCode) {
-	msg = m;
+TranscodeException::TranscodeException(string &m, int avErrorCode):msg(m) {
 	if (avErrorCode < 0) {
-		msg += avStrError(avErrorCode);
+		append(avErrorCode);
 	}
 
 }
 
-TranscodeException::TranscodeException(int avErrorCode) {
+TranscodeException::TranscodeException(int avErrorCode):msg() {
 	append(avErrorCode);
 }
 
-TranscodeException::TranscodeException() {
-	msg = "A transcode exception occured";
+TranscodeException::TranscodeException():msg("A transcode exception occured") {
 }
 
-TranscodeException::TranscodeException(const char* cpmsg, int avErrorCode) {
-	msg = string(cpmsg);
+TranscodeException::TranscodeException(const char* cpmsg, int avErrorCode):msg(cpmsg) {
 	append(avErrorCode);
 }
 
-TranscodeException::TranscodeException(const char* cpmsg) {
-	msg = string(cpmsg);
+TranscodeException::TranscodeException(const char* cpmsg):msg() {
+	msg << cpmsg;
+}
+
+TranscodeException::TranscodeException(const TranscodeException& c):msg() {
+	msg << c.msg;
 }
 
 TranscodeException::~TranscodeException() throw () {
@@ -43,21 +43,13 @@ TranscodeException::~TranscodeException() throw () {
 
 void TranscodeException::append(int avErrorCode) {
 	if (avErrorCode < 0) {
-		msg += avStrError(avErrorCode);
-		msg += "(";
-		msg += avErrorCode;
-		msg += ")";
+		char *s = new char[1024];
+		av_strerror(avErrorCode, s, 1024);
+		msg << s << "(" << avErrorCode << ")";
+		delete s;
 	}
 }
 
 const char* TranscodeException::what() const throw () {
-	return msg.c_str();
-}
-
-string TranscodeException::avStrError(int errorCode) {
-	char *s = new char[1024];
-	av_strerror(errorCode, s, 1024);
-	string errorMessage(s);
-	delete s;
-	return errorMessage;
+	return msg.str().c_str();
 }
