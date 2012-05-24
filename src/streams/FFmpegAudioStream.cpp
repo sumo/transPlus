@@ -8,7 +8,7 @@
 #include "FFmpegAudioStream.hpp"
 
 FFmpegAudioStream::FFmpegAudioStream(AVStream* avs, AVFormatContext* ctx) :
-		FFmpegDataGenerator<Sound>(avs, ctx, true, "FFmpegAudioStream") {
+		FFmpegStream(avs, ctx, "FFmpegAudioStream") {
 	sampleSize = 0;
 	samples = NULL;
 }
@@ -19,19 +19,16 @@ FFmpegAudioStream::~FFmpegAudioStream() {
 	}
 }
 
-bool FFmpegAudioStream::isValid(Sound* s) {
-	return s != NoSound;
-}
-
-Sound* FFmpegAudioStream::putImpl(AVPacket pkt) {
-	adjustTimeStamps(pkt);
-	checkAndAllocateSampleBuffer(pkt);
+shared_ptr<Sound> FFmpegAudioStream::decode(PacketPtr packet) {
+	AVPacket* pkt = packet.get();
+	adjustTimeStamps(*pkt);
+	checkAndAllocateSampleBuffer(*pkt);
 
 	int decodedDataSize = sampleSize;
 	/* XXX: could avoid copy if PCM 16 bits with same
 	 endianness as CPU */
 	int dataSize = avcodec_decode_audio3(avStream->codec, samples,
-			&decodedDataSize, &pkt);
+			&decodedDataSize, pkt);
 	if (dataSize < 0) {
 		string msg;
 		msg = "Failed to decode audio dts=";
@@ -41,8 +38,8 @@ Sound* FFmpegAudioStream::putImpl(AVPacket pkt) {
 		msg += " - ";
 		throw new TranscodeException(msg, dataSize);
 	}
-	pkt.data += dataSize;
-	pkt.size -= dataSize;
+	pkt->data += dataSize;
+	pkt->size -= dataSize;
 
 	/* Some bug in mpeg audio decoder gives */
 	/* decoded_data_size < 0, it seems they are overflows */
@@ -51,7 +48,7 @@ Sound* FFmpegAudioStream::putImpl(AVPacket pkt) {
 		//		ist->next_pts += ((int64_t) AV_TIME_BASE / bps * decoded_data_size)
 		//				/ (ist->st->codec->sample_rate * ist->st->codec->channels);
 		LOG4CPLUS_DEBUG(logger,
-				"Got audio dts=" << pkt.dts << " pts=" << pkt.pts);
+				"Got audio dts=" << pkt->dts << " pts=" << pkt->pts);
 	}
 	return NoSound;
 }

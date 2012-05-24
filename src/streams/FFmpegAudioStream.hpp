@@ -2,15 +2,20 @@
 #define FFMPEGAUDIOSTREAM_H_
 
 #include "FFmpegStream.hpp"
-#include "../Picture.hpp"
 
-class FFmpegAudioStream: public FFmpegDataGenerator<Sound> {
+class Sound : public DecodedData {
+	uint8_t *data;
+public:
+	Sound(uint8_t *, int);
+	virtual ~Sound();
+};
+
+class FFmpegAudioStream: public FFmpegStream {
 	int sampleSize;
 	int16_t *samples;
 	void checkAndAllocateSampleBuffer(AVPacket);
 protected:
-	virtual Sound* putImpl(AVPacket);
-	virtual bool isValid(Sound*);
+	shared_ptr<Sound> decode(PacketPtr);
 public:
 	FFmpegAudioStream(AVStream*, AVFormatContext*);
 	virtual ~FFmpegAudioStream();
@@ -19,5 +24,7 @@ public:
 	}
 };
 
-static Sound* NoSound = new Sound(0, 0);
+
+
+static shared_ptr<Sound> NoSound(new Sound(0, 0));
 #endif

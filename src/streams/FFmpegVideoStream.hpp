@@ -2,22 +2,34 @@
 #define FFMPEGVIDEOSTREAM_H_
 
 #include "FFmpegStream.hpp"
-#include "../Picture.hpp"
 
-class FFmpegVideoStream: public FFmpegDataGenerator<Picture> {
-protected:
-	virtual Picture* putImpl(AVPacket);
-	virtual bool isValid(Picture*);
-
+class Picture: public DecodedData {
+	AVFrame picture;
+	int64_t pts;
+	int64_t dts;
+	bool allocated;
 public:
-	FFmpegVideoStream(AVStream*, AVFormatContext*);
+	Picture(AVPicture* sourcePic, PixelFormat pixFormat, int width, int height,
+			int64_t pts, int64_t dts);
+	virtual ~Picture();
+	AVPicture* getPicture();
+};
+
+class FFmpegVideoStream: public FFmpegStream {
+protected:
+	shared_ptr<Picture> decode(PacketPtr);
+public:
+	FFmpegVideoStream(AVStream* avs, AVFormatContext* afc) :
+			FFmpegStream(avs, afc, "FFmpegVideoStream") {
+	}
+	;
 	virtual ~FFmpegVideoStream();
 	virtual StreamType getType() {
 		return VIDEO;
 	}
-
 };
 
-static Picture* NoPicture = new Picture(NULL, PIX_FMT_NONE, 0, 0, 0, 0);
+
+static shared_ptr<Picture> NoPicture(new Picture(NULL, PIX_FMT_NONE, 0, 0, 0, 0));
 
 #endif

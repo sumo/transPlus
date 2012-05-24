@@ -16,6 +16,8 @@
 #include <log4cplus/logger.h>
 #include <log4cplus/configurator.h>
 #include <boost/utility.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/shared_ptr.hpp>
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -28,7 +30,13 @@ enum StreamType {
 	AUDIO, VIDEO, UNKNOWN
 };
 
-class FFmpegStream  {
+typedef shared_ptr<AVPacket> PacketPtr;
+
+class DecodedData {
+
+};
+
+class FFmpegStream {
 
 protected:
 	AVStream* avStream;
@@ -42,50 +50,19 @@ protected:
 
 public:
 	static const float dtsDeltaThreshold = 10;
-	FFmpegStream(AVStream*, AVFormatContext*, bool, string);
 
-	virtual void put(AVPacket);
-	virtual void initPts();
-	virtual void adjustTimeStamps(AVPacket);
+	FFmpegStream(AVStream* avs, AVFormatContext* fc, string streamName);
+	void adjustTimeStamps(AVPacket pkt);
 	virtual StreamType getType() {
 		return UNKNOWN;
-	}
-	virtual string getCodec();
-	virtual ~FFmpegStream();
+	};
+	virtual string getCodec() {
+		return string(codec->name);
+	};
+	virtual ~FFmpegStream() {
+	};
+	shared_ptr<DecodedData> decode(PacketPtr);
 };
 
-template<class DecodedData>
-class FFmpegDataGenerator: public FFmpegStream {
-	vector<DecodedDataObserver<DecodedData> > observers;
-protected:
-	virtual DecodedData* putImpl(AVPacket)=0;
-	virtual bool isValid(DecodedData*)=0;
-	void notifyObservers(DecodedData data) {
-		typedef typename vector<DecodedDataObserver<DecodedData> >::iterator Itr;
-		Itr it;
-		for (it = observers.begin(); it < observers.end(); it++) {
-			(*it).dataDecoded(data);
-		}
-	}
-public:
-	FFmpegDataGenerator(AVStream* avs, AVFormatContext* ctx, bool findCodec,
-			string streamName) :
-			FFmpegStream(avs, ctx, findCodec, streamName) {
-	}
-
-	void put(AVPacket avp) {
-		DecodedData* data = putImpl(avp);
-		if (isValid(data)) {
-			notifyObservers(*data);
-			delete data;
-		}
-	}
-	virtual ~FFmpegDataGenerator() {
-
-	}
-	void addObserver(DecodedDataObserver<DecodedData> obs) {
-		observers.push_back(obs);
-	}
-};
 
 #endif /* FFMPEGSTREAM_H_ */

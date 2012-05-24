@@ -7,19 +7,9 @@
 
 #include "FFmpegVideoStream.hpp"
 
-FFmpegVideoStream::FFmpegVideoStream(AVStream* avs, AVFormatContext* ctx) :
-	FFmpegDataGenerator<Picture>(avs, ctx, true, "FFmpegVideoStream") {
 
-}
-
-FFmpegVideoStream::~FFmpegVideoStream() {
-}
-
-bool FFmpegVideoStream::isValid(Picture* s) {
-	return s != NoPicture;
-}
-
-Picture* FFmpegVideoStream::putImpl(AVPacket pkt) {
+shared_ptr<Picture> FFmpegVideoStream::decode(PacketPtr packet) {
+	AVPacket& pkt = *packet;
 	adjustTimeStamps(pkt);
 	AVFrame pFrame;
 	int gotPicture = 0;
@@ -48,10 +38,10 @@ Picture* FFmpegVideoStream::putImpl(AVPacket pkt) {
 			LOG4CPLUS_DEBUG(logger,
 					"Got picture dts=" << pkt.dts << " pts=" << pkt.pts);
 
-			Picture* pict = new Picture((AVPicture*) &pFrame, avStream->codec->pix_fmt,
-					avStream->codec->width, avStream->codec->height, pkt.pts,
-					pkt.dts);
-			return pict;
+			Picture* pict = new Picture((AVPicture*) &pFrame,
+					avStream->codec->pix_fmt, avStream->codec->width,
+					avStream->codec->height, pkt.pts, pkt.dts);
+			return shared_ptr<Picture>(pict);
 		}
 		// deal with this
 		//	if (avStream->codec->time_base.num != 0) {

@@ -19,44 +19,40 @@ extern "C" {
 #include <libavformat/avformat.h>
 }
 #include "streams/StreamReader.hpp"
-#include "FFmpegDecoder.hpp"
+#include "FFmpegDecodingContainer.hpp"
+#include "FFmpegEncodingContainer.hpp"
+#include "streams/StreamFactory.hpp"
 
 using namespace std;
+using namespace boost;
 
 int main(int argc, char* argv[]) {
+	if(argc < 2) {
+		cout << "Usage: transPlus <filename>";
+		exit(255);
+	}
 	BasicConfigurator::doConfigure();
 	avcodec_register_all();
 	av_register_all();
 	string filename(argv[1]);
 	Logger logger = Logger::getInstance(LOG4CPLUS_TEXT("Main"));
 	LOG4CPLUS_INFO(logger, avcodec_configuration());
-	AVCodec *ac = av_codec_next(NULL);
-	typedef map<CodecID, string> CodecMapType;
-	CodecMapType codecs;
-	while (ac) {
-		if (ac->long_name) {
-			codecs[ac->id] = string(ac->long_name);
-		}
-		ac = av_codec_next(ac);
-	}
+	CodecList codecs = StreamFactory::getCodecList();
+	ContainerList containers = FFmpegEncodingContainer::getContainerList();
 
-	CodecMapType::const_iterator end = codecs.end();
-	for (CodecMapType::const_iterator it = codecs.begin(); it != end; ++it) {
-		LOG4CPLUS_DEBUG(logger, it->first << ": " << it->second);
-	}
-
+	LOG4CPLUS_INFO(logger, "Configured with " << codecs.getCodecNames().size() << " codecs and " << containers.getContainers().size() << " containers");
 	LOG4CPLUS_INFO(logger, "Using file name " << filename);
 	ifstream src;
 	src.open(filename.c_str(), ios::binary);
 	StreamReader reader(src);
-	FFmpegDecoder decoder(reader);
+	FFmpegDecodingContainer decoder(reader);
 	map<string, string> m = decoder.getFormat();
 	LOG4CPLUS_INFO(logger,
 			"Format of content stream is " << (*m.begin()).second);
-	boost::ptr_vector<FFmpegStream> *streams = decoder.getStreams();
-	typedef typename boost::ptr_vector<FFmpegStream>::iterator Itr;
-	Itr it;
-	for (it = streams->begin(); it < streams->end(); it++) {
+	ptr_vector<ObservableDecodingStream>& streams = decoder.getStreams();
+
+	ptr_vector<ObservableDecodingStream>::iterator it;
+	for (it = streams.begin(); it < streams.end(); it++) {
 		LOG4CPLUS_INFO(logger, "Found stream " << it->getType() << " of codec " << it->getCodec());
 	}
 	decoder.runDecodeLoop();
