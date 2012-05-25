@@ -9,31 +9,22 @@
 #define DECODEDDATAOBSERVER_HPP_
 #include <vector>
 #include <boost/shared_ptr.hpp>
-#include "FFmpeg.hpp"
+#include <boost/bind.hpp>
+#include "../FFmpeg.hpp"
+#include "../streams/FFmpegStream.hpp"
+#include "Event.hpp"
 
 using namespace std;
 using namespace boost;
 
-typedef boost::shared_ptr<AVPacket> PacketPtr;
 
-template <typename DecodedDataType>
-class Event {
-protected:
-	PacketPtr packet;
-public:
-	Event(PacketPtr p) : packet(p) {
-	};
-	virtual shared_ptr<DecodedDataType> decode() = 0;
-	virtual ~Event();
-};
-
-template <typename DecodedDataType>
 class DecodedDataObserver {
 public:
 	DecodedDataObserver();
 	virtual ~DecodedDataObserver();
 public:
-	virtual void dataDecoded(shared_ptr<Event<DecodedDataType> > event);
+	virtual void dataDecoded(shared_ptr<AudioEvent> event);
+	virtual void dataDecoded(shared_ptr<VideoEvent> event);
 };
 
 #endif /* DECODEDDATAOBSERVER_HPP_ */

@@ -19,9 +19,9 @@ TEST(FFmpegDecodingContainer, ReadContainer) {
 	string format = (*m.begin()).first;
 	ASSERT_STREQ("mov,mp4,m4a,3gp,3g2,mj2", format.c_str());
 
-	ptr_vector<ObservableDecodingStream>& streams = decoder.getStreams();
+	ptr_vector<FFmpegStream> streams = decoder.getStreams();
 
-	ptr_vector<ObservableDecodingStream>::iterator it;
+	ptr_vector<FFmpegStream>::iterator it;
 	for (it = streams.begin(); it < streams.end(); it++) {
 		if (it->getType() == AUDIO) {
 			ASSERT_STREQ("aac", it->getCodec().c_str());

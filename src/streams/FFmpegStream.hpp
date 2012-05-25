@@ -12,7 +12,6 @@
 #include <exception>
 #include <queue>
 #include "../TranscodeException.hpp"
-#include "../DecodedDataObserver.hpp"
 #include <log4cplus/logger.h>
 #include <log4cplus/configurator.h>
 #include <boost/utility.hpp>
@@ -25,16 +24,13 @@ extern "C" {
 
 using namespace log4cplus;
 using namespace std;
+using namespace boost;
 
 enum StreamType {
 	AUDIO, VIDEO, UNKNOWN
 };
 
 typedef shared_ptr<AVPacket> PacketPtr;
-
-class DecodedData {
-
-};
 
 class FFmpegStream {
 
@@ -46,23 +42,29 @@ protected:
 	int nextPts;
 	bool start;
 	double pts;
+	int streamIndex;
 	Logger logger;
 
 public:
 	static const float dtsDeltaThreshold = 10;
 
-	FFmpegStream(AVStream* avs, AVFormatContext* fc, string streamName);
+	FFmpegStream(AVStream* avs, AVFormatContext* fc, string streamName,
+			int sIdx);
 	void adjustTimeStamps(AVPacket pkt);
 	virtual StreamType getType() {
 		return UNKNOWN;
-	};
+	}
 	virtual string getCodec() {
 		return string(codec->name);
-	};
+	}
 	virtual ~FFmpegStream() {
-	};
-	shared_ptr<DecodedData> decode(PacketPtr);
-};
+	}
+	template<class DecodedDataType>
+	shared_ptr<DecodedDataType> decode(PacketPtr);
 
+	int getStreamIndex() {
+		return streamIndex;
+	}
+};
 
 #endif /* FFMPEGSTREAM_H_ */

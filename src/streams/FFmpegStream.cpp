@@ -9,8 +9,8 @@
 
 using namespace std;
 
-FFmpegStream::FFmpegStream(AVStream* avs, AVFormatContext* fc, string streamName) :
-			avStream(avs), formatContext(fc), logger(
+FFmpegStream::FFmpegStream(AVStream* avs, AVFormatContext* fc, string streamName, int sIdx) :
+			avStream(avs), formatContext(fc), streamIndex(sIdx), logger(
 					Logger::getInstance(LOG4CPLUS_TEXT(streamName))) {
 		codec = avcodec_find_decoder(avs->codec->codec_id);
 		int open = avcodec_open(avStream->codec, codec);

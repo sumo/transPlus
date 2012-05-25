@@ -11,18 +11,19 @@
 shared_ptr<Picture> FFmpegVideoStream::decode(PacketPtr packet) {
 	AVPacket& pkt = *packet;
 	adjustTimeStamps(pkt);
-	AVFrame pFrame;
+	shared_ptr<AVFrame> pFrame(new AVFrame());
+
 	int gotPicture = 0;
 
 	if (pkt.size > 0) {
 		int decodedDataSize = (avStream->codec->width * avStream->codec->height
 				* 3) / 2;
 		/* XXX: allocate picture correctly */
-		avcodec_get_frame_defaults(&pFrame);
+		avcodec_get_frame_defaults(pFrame.get());
 
-		int ret = avcodec_decode_video2(avStream->codec, &pFrame, &gotPicture,
+		int ret = avcodec_decode_video2(avStream->codec, pFrame.get(), &gotPicture,
 				&pkt);
-		avStream->quality = pFrame.quality;
+		avStream->quality = pFrame->quality;
 
 		if (ret < 0) {
 			string msg;
@@ -38,9 +39,7 @@ shared_ptr<Picture> FFmpegVideoStream::decode(PacketPtr packet) {
 			LOG4CPLUS_DEBUG(logger,
 					"Got picture dts=" << pkt.dts << " pts=" << pkt.pts);
 
-			Picture* pict = new Picture((AVPicture*) &pFrame,
-					avStream->codec->pix_fmt, avStream->codec->width,
-					avStream->codec->height, pkt.pts, pkt.dts);
+			Picture* pict = new Picture(pFrame);
 			return shared_ptr<Picture>(pict);
 		}
 		// deal with this

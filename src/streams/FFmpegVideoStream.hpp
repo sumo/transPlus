@@ -3,33 +3,37 @@
 
 #include "FFmpegStream.hpp"
 
-class Picture: public DecodedData {
-	AVFrame picture;
-	int64_t pts;
-	int64_t dts;
-	bool allocated;
+class Picture {
+	shared_ptr<AVFrame> picture;
 public:
-	Picture(AVPicture* sourcePic, PixelFormat pixFormat, int width, int height,
-			int64_t pts, int64_t dts);
-	virtual ~Picture();
-	AVPicture* getPicture();
+	Picture(shared_ptr<AVFrame> sourcePic) :
+			picture(sourcePic) {
+	}
+	Picture(AVFrame* sourcePic) :
+			picture(sourcePic) {
+	}
+	virtual ~Picture() {
+
+	}
+	shared_ptr<AVFrame> getFrame() {
+		return picture;
+	}
 };
 
 class FFmpegVideoStream: public FFmpegStream {
-protected:
-	shared_ptr<Picture> decode(PacketPtr);
 public:
-	FFmpegVideoStream(AVStream* avs, AVFormatContext* afc) :
-			FFmpegStream(avs, afc, "FFmpegVideoStream") {
+	FFmpegVideoStream(AVStream* avs, AVFormatContext* afc, int streamIndex) :
+			FFmpegStream(avs, afc, "FFmpegVideoStream", streamIndex) {
 	}
-	;
-	virtual ~FFmpegVideoStream();
+	virtual ~FFmpegVideoStream() {
+
+	}
 	virtual StreamType getType() {
 		return VIDEO;
 	}
+	shared_ptr<Picture> decode(PacketPtr);
 };
 
-
-static shared_ptr<Picture> NoPicture(new Picture(NULL, PIX_FMT_NONE, 0, 0, 0, 0));
+static shared_ptr<Picture> NoPicture(new Picture(shared_ptr<AVFrame>()));
 
 #endif

@@ -49,9 +49,9 @@ int main(int argc, char* argv[]) {
 	map<string, string> m = decoder.getFormat();
 	LOG4CPLUS_INFO(logger,
 			"Format of content stream is " << (*m.begin()).second);
-	ptr_vector<ObservableDecodingStream>& streams = decoder.getStreams();
+	ptr_vector<FFmpegStream> streams = decoder.getStreams();
 
-	ptr_vector<ObservableDecodingStream>::iterator it;
+	ptr_vector<FFmpegStream>::iterator it;
 	for (it = streams.begin(); it < streams.end(); it++) {
 		LOG4CPLUS_INFO(logger, "Found stream " << it->getType() << " of codec " << it->getCodec());
 	}

@@ -65,11 +65,13 @@ void FFmpegDecodingContainer::probeStreams() {
 		switch (stream->codec->codec_type) {
 		case AVMEDIA_TYPE_VIDEO:
 			LOG4CPLUS_DEBUG(logger, "Creating video stream");
-			ffStreams.push_back(new FFmpegVideoStream(stream, formatContext));
+			ffStreams.push_back(
+					new FFmpegVideoStream(stream, formatContext, i));
 			break;
 		case AVMEDIA_TYPE_AUDIO:
 			LOG4CPLUS_DEBUG(logger, "Creating audio stream");
-			ffStreams.push_back(new FFmpegAudioStream(stream, formatContext));
+			ffStreams.push_back(
+					new FFmpegAudioStream(stream, formatContext, i));
 			break;
 		case AVMEDIA_TYPE_DATA:
 		case AVMEDIA_TYPE_NB:
@@ -84,6 +86,11 @@ void FFmpegDecodingContainer::probeStreams() {
 	}
 
 	LOG4CPLUS_INFO(logger, "Found " << ffStreams.size() << " streams");
+}
+
+template<class DecodedDataType, class StreamType>
+void FFmpegDecodingContainer::notifyObservers(Event<DecodedDataType, StreamType>& event) {
+
 }
 
 void FFmpegDecodingContainer::runDecodeLoop() {
@@ -108,13 +115,27 @@ void FFmpegDecodingContainer::runDecodeLoop() {
 			int streamIdx = pkt.stream_index;
 			if (streamIdx < ffStreams.size()) {
 				FFmpegStream& ffStream = ffStreams[streamIdx];
-
+				switch (ffStream.getType()) {
+				case AUDIO: {
+					FFmpegAudioStream& audioStream = dynamic_cast<FFmpegAudioStream&>(ffStream);
+					AudioEvent audioEvent(pkt, audioStream);
+					notifyObservers(audioEvent);
+				}
+					break;
+				case VIDEO: {
+					FFmpegVideoStream& videoStream = dynamic_cast<FFmpegVideoStream&>(ffStream);
+					VideoEvent videoEvent(pkt, videoStream);
+					notifyObservers(videoEvent);
+				}
+					break;
+				default:
+					break;
+				}
 			} else {
 				LOG4CPLUS_DEBUG(logger, "Ignoring new stream " << streamIdx);
 			}
 
 		}
-		av_free_packet(&pkt);
 	}
 }
 

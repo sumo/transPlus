@@ -41,7 +41,7 @@ protected:
 		}
 	}
 public:
-	boost::ptr_vector<FFmpegStream>& getStreams() {
+	boost::ptr_vector<FFmpegStream> getStreams() {
 		return ffStreams;
 	}
 };
