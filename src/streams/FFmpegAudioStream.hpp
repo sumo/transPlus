@@ -30,6 +30,9 @@ public:
 		return AUDIO;
 	}
 	shared_ptr<Sound> decode(PacketPtr);
+	FFmpegAudioStream* clone() const {
+		return new FFmpegAudioStream(*this);
+	}
 };
 
 static shared_ptr<Sound> NoSound(new Sound(shared_ptr<uint8_t>()));

@@ -80,7 +80,7 @@ void FFmpegDecodingContainer::probeStreams() {
 		case AVMEDIA_TYPE_ATTACHMENT:
 		default:
 			LOG4CPLUS_DEBUG( logger,
-					"Unknown stream " << stream->codec->codec_type << " has tobe ignored");
+					"Unknown stream " << stream->codec->codec_type << " has to be ignored");
 			break;
 		}
 	}

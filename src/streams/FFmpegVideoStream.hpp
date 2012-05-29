@@ -32,6 +32,9 @@ public:
 		return VIDEO;
 	}
 	shared_ptr<Picture> decode(PacketPtr);
+	FFmpegVideoStream* clone() const {
+		return new FFmpegVideoStream(*this);
+	}
 };
 
 static shared_ptr<Picture> NoPicture(new Picture(shared_ptr<AVFrame>()));

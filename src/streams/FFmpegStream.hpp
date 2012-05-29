@@ -65,6 +65,9 @@ public:
 	int getStreamIndex() {
 		return streamIndex;
 	}
+	virtual FFmpegStream* clone() const = 0;
 };
+
+FFmpegStream* new_clone(FFmpegStream const& other);
 
 #endif /* FFMPEGSTREAM_H_ */
